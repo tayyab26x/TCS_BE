@@ -121,3 +121,9 @@ STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = 'courier.CustomUser'
 # Default primary key field type
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
