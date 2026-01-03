@@ -17,12 +17,11 @@ class CustomUser(AbstractUser):
         ('customer', 'Customer'),
     )
 
-    role = models.CharField(
-        max_length=20,
-        choices=ROLE_CHOICES,
-        default='customer',
-        verbose_name='User Role'
-    )
+    email = models.EmailField(unique=True)  # ensure email is unique
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
+
+    USERNAME_FIELD = 'email'  # <- THIS MAKES LOGIN USE EMAIL
+    REQUIRED_FIELDS = ['username']  # username is still required for AbstractUser
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"

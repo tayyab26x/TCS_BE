@@ -2,22 +2,34 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from .models import Shipment, CourierStaff, Branch, CustomUser
-from .serializers import ShipmentSerializer,UserSerializer, ChangePasswordSerializer,BranchSerializer
+from .serializers import (
+    ShipmentSerializer, UserSerializer, ChangePasswordSerializer,
+    BranchSerializer, MyTokenObtainPairSerializer
+)
 from .helpers import assign_shipment_to_courier, update_shipment_status
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.permissions import AllowAny
 
+
+# Custom JWT login view using email instead of username
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
 
 
 # -------------------------
 # Create new user (Admin / Super Manager)
 # -------------------------
 class CreateUserAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]  # Public access
 
     def post(self, request):
-        if request.user.role not in ['admin', 'super_manager']:
-            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        data = request.data.copy()
 
-        serializer = UserSerializer(data=request.data)
+        # Default role to customer if not provided
+        if 'role' not in data:
+            data['role'] = 'customer'
+
+        serializer = UserSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

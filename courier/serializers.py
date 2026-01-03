@@ -1,5 +1,50 @@
 from rest_framework import serializers
 from .models import CustomUser, Branch, Shipment, CourierStaff, ShipmentTracking, Payment
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+# -------------------- Safe JWT Login Serializer --------------------
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    # Use email as the login field
+    username_field = 'email'
+
+    def validate(self, attrs):
+        # attrs has email & password
+        email = attrs.get("email")
+        password = attrs.get("password")
+
+        if email and password:
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                raise serializers.ValidationError("No user found with this email.")
+
+            if not user.check_password(password):
+                raise serializers.ValidationError("Incorrect password.")
+
+            if not user.is_active:
+                raise serializers.ValidationError("User account is disabled.")
+
+            # Call parent to generate token
+            data = super().validate({"email": user.email, "password": password})
+
+            # Optionally include user info in the token response
+            data.update({
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "role": user.role,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name
+                }
+            })
+            return data
+
+        raise serializers.ValidationError("Must include 'email' and 'password'.")
+        
 
 # -------------------- User Serializers --------------------
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -67,7 +112,6 @@ class ShipmentSerializer(serializers.ModelSerializer):
             'branch', 'courier', 'tracking_updates'
         ]
 
-    # Only return courier info safely to avoid looping
     def get_courier(self, obj):
         if obj.courier:
             return {
